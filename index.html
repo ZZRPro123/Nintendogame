@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Boy</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        .gameboy {
+            background: linear-gradient(145deg, #c0c0c8 0%, #a0a0a8 50%, #909098 100%);
+            width: 320px;
+            height: 520px;
+            border-radius: 15px 15px 60px 15px;
+            padding: 20px;
+            box-shadow: 
+                8px 8px 20px rgba(0,0,0,0.5),
+                inset 2px 2px 5px rgba(255,255,255,0.3),
+                inset -2px -2px 5px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .gameboy::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            border-radius: 2px;
+        }
+
+        .screen-bezel {
+            background: linear-gradient(145deg, #4a4a5a 0%, #3a3a4a 100%);
+            border-radius: 10px 10px 30px 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: inset 3px 3px 8px rgba(0,0,0,0.5);
+        }
+
+        .screen-label {
+            color: #5a5a6a;
+            font-size: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dot-matrix {
+            display: flex;
+            gap: 2px;
+        }
+
+        .dot-matrix span {
+            width: 4px;
+            height: 4px;
+            background: #6a6a7a;
+            border-radius: 50%;
+        }
+
+        .power-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .power-led {
+            width: 8px;
+            height: 8px;
+            background: #333;
+            border-radius: 50%;
+            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.5);
+            transition: all 0.3s;
+        }
+
+        .power-led.on {
+            background: #ff0040;
+            box-shadow: 0 0 10px #ff0040, 0 0 20px #ff0040;
+        }
+
+        .power-label {
+            color: #8a1538;
+            font-size: 5px;
+            font-weight: bold;
+        }
+
+        .screen-inner {
+            background: #1a1a10;
+            border-radius: 5px;
+            padding: 8px;
+            box-shadow: inset 2px 2px 10px rgba(0,0,0,0.8);
+        }
+
+        .lcd-screen {
+            background: #9bbc0f;
+            width: 240px;
+            height: 200px;
+            image-rendering: pixelated;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .lcd-screen::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                repeating-linear-gradient(
+                    0deg,
+                    rgba(0,0,0,0.03) 0px,
+                    rgba(0,0,0,0.03) 1px,
+                    transparent 1px,
+                    transparent 2px
+                ),
+                repeating-linear-gradient(
+                    90deg,
+                    rgba(0,0,0,0.03) 0px,
+                    rgba(0,0,0,0.03) 1px,
+                    transparent 1px,
+                    transparent 2px
+                );
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .lcd-screen canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .nintendo-logo {
+            color: #1a1a8a;
+            font-size: 10px;
+            font-weight: bold;
+            font-style: italic;
+            text-align: center;
+            margin-top: 8px;
+            letter-spacing: 2px;
+            font-family: Arial, sans-serif;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-top: 20px;
+            padding: 0 10px;
+        }
+
+        .dpad-container {
+            position: relative;
+            width: 90px;
+            height: 90px;
+        }
+
+        .dpad-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            background: #2a2a32;
+            border-radius: 50%;
+            z-index: 5;
+        }
+
+        .dpad-btn {
+            position: absolute;
+            background: linear-gradient(145deg, #2a2a32 0%, #1a1a22 100%);
+            border: none;
+            cursor: pointer;
+            transition: all 0.1s;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.4);
+        }
+
+        .dpad-btn:active, .dpad-btn.pressed {
+            transform: scale(0.95);
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+        }
+
+        .dpad-up, .dpad-down {
+            width: 30px;
+            height: 35px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .dpad-up {
+            top: 0;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .dpad-down {
+            bottom: 0;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .dpad-left, .dpad-right {
+            width: 35px;
+            height: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .dpad-left {
+            left: 0;
+            border-radius: 8px 0 0 8px;
+        }
+
+        .dpad-right {
+            right: 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .ab-buttons {
+            display: flex;
+            gap: 15px;
+            transform: rotate(-25deg);
+            margin-top: 20px;
+        }
+
+        .ab-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #8a1538 0%, #6a0028 100%);
+            border: none;
+            cursor: pointer;
+            color: #2a0010;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 10px;
+            font-weight: bold;
+            box-shadow: 
+                3px 3px 8px rgba(0,0,0,0.4),
+                inset 1px 1px 3px rgba(255,255,255,0.2);
+            transition: all 0.1s;
+        }
+
+        .ab-btn:active, .ab-btn.pressed {
+            transform: scale(0.95);
+            box-shadow: 1px 1px 4px rgba(0,0,0,0.4);
+        }
+
+        .ab-label {
+            text-align: center;
+            color: #4a4a5a;
+            font-size: 7px;
+            margin-top: 5px;
+            transform: rotate(25deg);
+        }
+
+        .menu-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 25px;
+        }
+
+        .menu-btn {
+            width: 40px;
+            height: 12px;
+            background: linear-gradient(145deg, #6a6a72 0%, #5a5a62 100%);
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transform: rotate(-25deg);
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .menu-btn:active {
+            transform: rotate(-25deg) scale(0.95);
+        }
+
+        .menu-label {
+            text-align: center;
+            color: #4a4a5a;
+            font-size: 5px;
+            margin-top: 8px;
+        }
+
+        .speaker-grille {
+            position: absolute;
+            bottom: 30px;
+            right: 25px;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 4px;
+            transform: rotate(-25deg);
+        }
+
+        .speaker-hole {
+            width: 5px;
+            height: 5px;
+            background: #4a4a52;
+            border-radius: 50%;
+            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .brand-text {
+            position: absolute;
+            bottom: 80px;
+            left: 25px;
+            color: #5a5a6a;
+            font-size: 5px;
+        }
+
+        .phones-jack {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .phones-label {
+            color: #5a5a6a;
+            font-size: 5px;
+        }
+
+        .jack-hole {
+            width: 8px;
+            height: 8px;
+            background: #2a2a32;
+            border-radius: 50%;
+            box-shadow: inset 1px 1px 3px rgba(0,0,0,0.8);
+        }
+
+        .start-message {
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="gameboy">
+        <div class="screen-bezel">
+            <div class="screen-label">
+                <div class="dot-matrix">
+                    <span></span><span></span>
+                </div>
+                <span>DOT MATRIX WITH STEREO SOUND</span>
+            </div>
+            <div class="power-section">
+                <div class="power-led" id="powerLed"></div>
+                <span class="power-label">POWER</span>
+            </div>
+            <div class="screen-inner">
+                <div class="lcd-screen">
+                    <canvas id="gameCanvas" width="160" height="144"></canvas>
+                </div>
+            </div>
+            <div class="nintendo-logo">GAME BOY</div>
+        </div>
+
+        <div class="controls">
+            <div class="dpad-container">
+                <button class="dpad-btn dpad-up" id="btnUp"></button>
+                <button class="dpad-btn dpad-down" id="btnDown"></button>
+                <button class="dpad-btn dpad-left" id="btnLeft"></button>
+                <button class="dpad-btn dpad-right" id="btnRight"></button>
+                <div class="dpad-center"></div>
+            </div>
+
+            <div>
+                <div class="ab-buttons">
+                    <div>
+                        <button class="ab-btn" id="btnB">B</button>
+                        <div class="ab-label">B</div>
+                    </div>
+                    <div>
+                        <button class="ab-btn" id="btnA">A</button>
+                        <div class="ab-label">A</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="menu-buttons">
+            <div>
+                <button class="menu-btn" id="btnSelect"></button>
+                <div class="menu-label">SELECT</div>
+            </div>
+            <div>
+                <button class="menu-btn" id="btnStart"></button>
+                <div class="menu-label">START</div>
+            </div>
+        </div>
+
+        <div class="speaker-grille">
+            <div class="speaker-hole"></div><div class="speaker-hole"></div><div class="speaker-hole"></div>
+            <div class="speaker-hole"></div><div class="speaker-hole"></div><div class="speaker-hole"></div>
+            <div class="speaker-hole"></div><div class="speaker-hole"></div><div class="speaker-hole"></div>
+            <div class="speaker-hole"></div><div class="speaker-hole"></div><div class="speaker-hole"></div>
+            <div class="speaker-hole"></div><div class="speaker-hole"></div><div class="speaker-hole"></div>
+            <div class="speaker-hole"></div><div class="speaker-hole"></div><div class="speaker-hole"></div>
+        </div>
+
+        <div class="phones-jack">
+            <span class="phones-label">🎧 PHONES</span>
+            <div class="jack-hole"></div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const powerLed = document.getElementById('powerLed');
+
+        // Game Boy color palette (4 shades of green)
+        const colors = {
+            lightest: '#9bbc0f',
+            light: '#8bac0f',
+            dark: '#306230',
+            darkest: '#0f380f'
+        };
+
+        // Game state
+        let gameState = 'title'; // title, playing, gameover
+        let score = 0;
+        let highScore = 0;
+        let isPowered = true;
+
+        // Player (simple spaceship/paddle)
+        const player = {
+            x: 72,
+            y: 120,
+            width: 16,
+            height: 8,
+            speed: 3
+        };
+
+        // Enemies/obstacles
+        let enemies = [];
+        let bullets = [];
+        let frameCount = 0;
+
+        // Input state
+        const keys = {
+            up: false,
+            down: false,
+            left: false,
+            right: false,
+            a: false,
+            b: false
+        };
+
+        // Power on
+        powerLed.classList.add('on');
+
+        function drawPixelRect(x, y, w, h, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(Math.floor(x), Math.floor(y), w, h);
+        }
+
+        function drawText(text, x, y, color = colors.darkest) {
+            ctx.fillStyle = color;
+            ctx.font = '8px "Press Start 2P"';
+            ctx.fillText(text, x, y);
+        }
+
+        function drawTitleScreen() {
+            // Background
+            ctx.fillStyle = colors.lightest;
+            ctx.fillRect(0, 0, 160, 144);
+
+            // Title
+            ctx.fillStyle = colors.darkest;
+            ctx.font = '10px "Press Start 2P"';
+            ctx.fillText('SPACE', 45, 35);
+            ctx.fillText('BLASTER', 35, 50);
+
+            // Ship graphic
+            drawShip(72, 75, colors.darkest);
+
+            // Stars decoration
+            for (let i = 0; i < 15; i++) {
+                const sx = (i * 37 + frameCount) % 160;
+                const sy = (i * 23) % 60 + 85;
+                drawPixelRect(sx, sy, 2, 2, colors.dark);
+            }
+
+            // Blinking start text
+            if (Math.floor(frameCount / 30) % 2 === 0) {
+                ctx.font = '6px "Press Start 2P"';
+                ctx.fillStyle = colors.darkest;
+                ctx.fillText('PRESS START', 35, 125);
+            }
+
+            // High score
+            ctx.font = '6px "Press Start 2P"';
+            ctx.fillStyle = colors.dark;
+            ctx.fillText('HI:' + String(highScore).padStart(5, '0'), 50, 140);
+        }
+
+        function drawShip(x, y, color) {
+            ctx.fillStyle = color;
+            // Main body
+            ctx.fillRect(x, y, 16, 6);
+            // Cockpit
+            ctx.fillRect(x + 6, y - 2, 4, 2);
+            // Wings
+            ctx.fillRect(x - 2, y + 4, 4, 4);
+            ctx.fillRect(x + 14, y + 4, 4, 4);
+        }
+
+        function drawEnemy(x, y, type) {
+            ctx.fillStyle = colors.darkest;
+            if (type === 0) {
+                // Alien type 1
+                ctx.fillRect(x + 4, y, 8, 4);
+                ctx.fillRect(x, y + 4, 16, 4);
+                ctx.fillRect(x + 2, y + 8, 4, 4);
+                ctx.fillRect(x + 10, y + 8, 4, 4);
+            } else {
+                // Alien type 2
+                ctx.fillRect(x + 2, y, 12, 4);
+                ctx.fillRect(x, y + 4, 16, 6);
+                ctx.fillRect(x + 4, y + 10, 8, 2);
+            }
+        }
+
+        function spawnEnemy() {
+            enemies.push({
+                x: Math.random() * 140,
+                y: -16,
+                type: Math.floor(Math.random() * 2),
+                speed: 1 + Math.random() * 1.5
+            });
+        }
+
+        function shoot() {
+            bullets.push({
+                x: player.x + 6,
+                y: player.y - 4,
+                speed: 5
+            });
+        }
+
+        function updateGame() {
+            // Move player
+            if (keys.left && player.x > 0) player.x -= player.speed;
+            if (keys.right && player.x < 144) player.x += player.speed;
+            if (keys.up && player.y > 20) player.y -= player.speed;
+            if (keys.down && player.y < 130) player.y += player.speed;
+
+            // Spawn enemies
+            if (frameCount % 60 === 0) {
+                spawnEnemy();
+            }
+
+            // Update enemies
+            enemies = enemies.filter(enemy => {
+                enemy.y += enemy.speed;
+                
+                // Collision with player
+                if (enemy.x < player.x + player.width &&
+                    enemy.x + 16 > player.x &&
+                    enemy.y < player.y + player.height &&
+                    enemy.y + 12 > player.y) {
+                    gameState = 'gameover';
+                    if (score > highScore) highScore = score;
+                }
+                
+                return enemy.y < 150;
+            });
+
+            // Update bullets
+            bullets = bullets.filter(bullet => {
+                bullet.y -= bullet.speed;
+                
+                // Check collision with enemies
+                for (let i = enemies.length - 1; i >= 0; i--) {
+                    const enemy = enemies[i];
+                    if (bullet.x > enemy.x && bullet.x < enemy.x + 16 &&
+                        bullet.y > enemy.y && bullet.y < enemy.y + 12) {
+                        enemies.splice(i, 1);
+                        score += 100;
+                        return false;
+                    }
+                }
+                
+                return bullet.y > -10;
+            });
+        }
+
+        function drawGame() {
+            // Background
+            ctx.fillStyle = colors.lightest;
+            ctx.fillRect(0, 0, 160, 144);
+
+            // Stars background
+            for (let i = 0; i < 20; i++) {
+                const sx = (i * 31) % 160;
+                const sy = ((i * 17) + frameCount) % 144;
+                drawPixelRect(sx, sy, 2, 2, colors.light);
+            }
+
+            // Draw player
+            drawShip(player.x, player.y, colors.darkest);
+
+            // Draw enemies
+            enemies.forEach(enemy => {
+                drawEnemy(enemy.x, enemy.y, enemy.type);
+            });
+
+            // Draw bullets
+            ctx.fillStyle = colors.darkest;
+            bullets.forEach(bullet => {
+                ctx.fillRect(bullet.x, bullet.y, 4, 8);
+            });
+
+            // HUD
+            ctx.fillStyle = colors.darkest;
+            ctx.font = '6px "Press Start 2P"';
+            ctx.fillText('SCORE:' + String(score).padStart(5, '0'), 5, 12);
+        }
+
+        function drawGameOver() {
+            ctx.fillStyle = colors.lightest;
+            ctx.fillRect(0, 0, 160, 144);
+
+            ctx.fillStyle = colors.darkest;
+            ctx.font = '10px "Press Start 2P"';
+            ctx.fillText('GAME', 55, 45);
+            ctx.fillText('OVER', 55, 60);
+
+            ctx.font = '6px "Press Start 2P"';
+            ctx.fillText('SCORE:' + String(score).padStart(5, '0'), 35, 85);
+            ctx.fillText('HIGH:' + String(highScore).padStart(5, '0'), 38, 100);
+
+            if (Math.floor(frameCount / 30) % 2 === 0) {
+                ctx.fillText('PRESS START', 35, 125);
+            }
+        }
+
+        function gameLoop() {
+            if (!isPowered) {
+                ctx.fillStyle = '#0f380f';
+                ctx.fillRect(0, 0, 160, 144);
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+
+            frameCount++;
+
+            if (gameState === 'title') {
+                drawTitleScreen();
+            } else if (gameState === 'playing') {
+                updateGame();
+                drawGame();
+            } else if (gameState === 'gameover') {
+                drawGameOver();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            gameState = 'playing';
+            score = 0;
+            player.x = 72;
+            player.y = 120;
+            enemies = [];
+            bullets = [];
+        }
+
+        // Button handlers
+        function setupButton(id, key) {
+            const btn = document.getElementById(id);
+            btn.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                keys[key] = true;
+                btn.classList.add('pressed');
+            });
+            btn.addEventListener('mouseup', () => {
+                keys[key] = false;
+                btn.classList.remove('pressed');
+            });
+            btn.addEventListener('mouseleave', () => {
+                keys[key] = false;
+                btn.classList.remove('pressed');
+            });
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys[key] = true;
+                btn.classList.add('pressed');
+            });
+            btn.addEventListener('touchend', () => {
+                keys[key] = false;
+                btn.classList.remove('pressed');
+            });
+        }
+
+        setupButton('btnUp', 'up');
+        setupButton('btnDown', 'down');
+        setupButton('btnLeft', 'left');
+        setupButton('btnRight', 'right');
+        setupButton('btnA', 'a');
+        setupButton('btnB', 'b');
+
+        // A button shoots
+        document.getElementById('btnA').addEventListener('mousedown', () => {
+            if (gameState === 'playing') shoot();
+        });
+        document.getElementById('btnA').addEventListener('touchstart', () => {
+            if (gameState === 'playing') shoot();
+        });
+
+        // Start button
+        document.getElementById('btnStart').addEventListener('click', () => {
+            if (gameState === 'title' || gameState === 'gameover') {
+                startGame();
+            }
+        });
+
+        // Select toggles power
+        document.getElementById('btnSelect').addEventListener('click', () => {
+            isPowered = !isPowered;
+            powerLed.classList.toggle('on', isPowered);
+        });
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowUp': keys.up = true; break;
+                case 'ArrowDown': keys.down = true; break;
+                case 'ArrowLeft': keys.left = true; break;
+                case 'ArrowRight': keys.right = true; break;
+                case 'z': case 'Z': 
+                    keys.a = true;
+                    if (gameState === 'playing') shoot();
+                    break;
+                case 'x': case 'X': keys.b = true; break;
+                case 'Enter':
+                    if (gameState === 'title' || gameState === 'gameover') {
+                        startGame();
+                    }
+                    break;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            switch(e.key) {
+                case 'ArrowUp': keys.up = false; break;
+                case 'ArrowDown': keys.down = false; break;
+                case 'ArrowLeft': keys.left = false; break;
+                case 'ArrowRight': keys.right = false; break;
+                case 'z': case 'Z': keys.a = false; break;
+                case 'x': case 'X': keys.b = false; break;
+            }
+        });
+
+        // Start the game loop
+        gameLoop();
+    </script>
+</body>
+</html>
